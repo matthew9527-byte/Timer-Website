@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time 5 minute</title>
+    <style>
+    :root{font-family: Inter, Roboto, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif}
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#e6eef8;margin:0}
+    .card{background:#0b1220;padding:28px;border-radius: 12px;box-shadow: 0 8px 30px rgba(2, 6, 23, 6);width:360px}
+    h1{font-size: 18px;margin:0 0. 4px}
+    .control{display:flex;gap:8px;margin-bottom: 12px;}
+    input[type=number]{flex:1;padding:10px;border-radius: 8px;border:1px solid #203040;background:#071024;color:inherit}
+    button{padding:10px 12px;border-radius: 8px; border:0;background:#2563eb;color:white;cursor:pointer}
+    button.secondary{background:#334155}
+    .display{font-size: 48px; font-weight: 700; text-align:center;padding:14px 0}
+    .note{font-size: 13px;color:#9fb0d6;margin-top:8px}
+    .small{font-size:13px;}
+</style>
+</head>
+<body>
+    <div class="card">
+        <h1>Đồng hồ đếm ngược</h1>
+
+        <div class="controls">
+            <input id="secondsInput" type="number" min="1" placeholder="0"/>
+            <button id="startBtn">Start</button>
+            <button id="cancelBtn" class="secondary">Cancel</button>
+        </div>
+        
+        <div class="display" id="display">00:00</div>
+        <div class="note">Bạn có thể bắt đầu đếm ngược rồi nha!!!</div>
+    </div>
+    <script>
+        // hàm delay để trar về promise resolve sau ms 
+        function delay(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        // hàm format giây -> MM : SS
+        function formatTime(totalSeconds) {
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        } 
+
+        //countdowntPromise: trả về Promise
+        //- resolve() khi countdown về 0
+        //- reject(reason) nếu bị huỷ
+        function countdownPromise(seconds, onTick) {
+            return new Promise((resolve, reject) => {
+                if(typeof seconds !== 'number' || seconds <= 0) {
+                    reject(new Error('Số giây không hợp lệ'));
+                    return;
+                }
+
+                let remaining = Math.floor(seconds);
+                //gọi lần đầu để hiển thị ngay
+                if(onTick) onTick(remaining);
+
+                const timerId = setInterval(() => {
+                    remaining -= 1;
+                    if (onTick) onTick(remaining);
+
+                    if(remaining <= 0) {
+                        clearInterval(timerId);
+                        resolve();
+                    }
+                }, 1000);
+
+                //cung cấp hàm huỷ: gán rejectFunc để có thể gọi từ bên ngoài
+                countdownPromise._currentReject = (reason) => {
+                    cleaInterval(timeId);
+                    reject(reason || new Error(' Đã huỷ'));
+                };
+            });
+        }
+
+        //Đây là cách sử dụng: gắn sự kiện cho các nút
+        const startBtn = document.getElementById('startBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const display = document.getElementById('display');
+        const secondsInput = document.getElementById('secondsInput');
+
+        let activePromise = null;
+
+        startBtn.addEventListener('click', async () => {
+            const value = Number(secondsInput.value) || 0;
+            if (value <= 0) {
+                alert('Vui lòng nhập số giây > 0');
+                return;
+            }
+
+            //Gọi countdownPromise và chờ nó resolve
+            display.textContent = formatTime(value);
+
+            try {
+                activePromise = countdownPromise(value, (remaining) => {
+                    display.textContent = formatTime(Math.max(0, remaining));
+                });
+                
+                // ví dụ: nối thêm một Promise delay để chờ 500ms trức khi hiện thông báo
+                await activePromise;
+                await delay(500);
+                alert('Đếm ngược hoàn tất!');
+                activePromise = null;
+            } catch (err) {
+                // bị huỷ hoặc lỗi 
+                console.log('Countdown lỗi/huỷ:', err);
+                display.textContent = '00:00';
+                activePromise = null;
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            // newu có reject hiện tại, gọi nó để reject Promise
+            if (countdownPromise._currentReject) {
+                countdownPromise._currentReject(new Error('Người dùng huỷ'));
+                // xoá để tránh gọi lại
+                delete countdownPromise._currentReject;
+            }
+        });
+
+        // Gợi ý: ví dụ chaining Promise
+        // countdownPromise(5, r => console.log('tick', r))
+        // .then(() => console.log('xong'))
+        // .catch(err => console.log('bị huỷ', err));
+    </script>
+
+</body>
+</html>
