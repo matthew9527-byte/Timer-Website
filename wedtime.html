@@ -70,7 +70,7 @@
 
                 //cung cấp hàm huỷ: gán rejectFunc để có thể gọi từ bên ngoài
                 countdownPromise._currentReject = (reason) => {
-                    clearInterval(timeId);
+                    clearInterval(timerId);
                     reject(reason || new Error(' Đã huỷ'));
                 };
             });
